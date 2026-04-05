@@ -1,0 +1,8 @@
+CREATE TABLE posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  body TEXT,
+  image_url TEXT,
+  author TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

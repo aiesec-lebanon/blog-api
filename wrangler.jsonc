@@ -13,6 +13,13 @@
 	"upload_source_maps": true,
 	"compatibility_flags": [
 		"nodejs_compat"
+	],
+	"d1_databases": [
+		{
+			"binding": "blog_db",
+			"database_name": "blog-db",
+			"database_id": "37bf2164-52b1-462e-bd9e-f7e858b0320d"
+		}
 	]
 	/**
 	 * Smart Placement
