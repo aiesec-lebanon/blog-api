@@ -26,33 +26,37 @@ export default {
     if (request.method === "GET" && url.pathname === "/posts") {
 
       const cache = caches.default
+      const page = Number(url.searchParams.get("page") || 0)
       const cacheKey = new Request(request.url)
 
-      let response = await cache.match(cacheKey)
-      if (response) {
-        return addCors(response)
+      // ✅ Only use cache for page > 0
+      if (page !== 0) {
+        const cached = await cache.match(cacheKey)
+        if (cached) return addCors(cached)
       }
 
-      const page = Number(url.searchParams.get("page") || 0)
       const limit = 25
       const offset = page * limit
 
       const { results } = await env.blog_db.prepare(
         `SELECT * FROM posts
-         ORDER BY created_at DESC
-         LIMIT ? OFFSET ?`
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?`
       )
         .bind(limit, offset)
         .all()
 
-      response = new Response(JSON.stringify(results), {
+      const response = new Response(JSON.stringify(results), {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "public, max-age=60"
         }
       })
 
-      ctx.waitUntil(cache.put(cacheKey, response.clone()))
+      // ✅ Cache only older pages
+      if (page !== 0) {
+        ctx.waitUntil(cache.put(cacheKey, response.clone()))
+      }
 
       return addCors(response)
     }
@@ -63,7 +67,6 @@ export default {
     if (request.method === "POST" && url.pathname === "/posts") {
 
       const data: BlogRequest = await request.json()
-
       const { title, body, author } = data
 
       if (!title) {
@@ -72,7 +75,7 @@ export default {
 
       await env.blog_db.prepare(
         `INSERT INTO posts (title, body, author)
-         VALUES (?, ?, ?)`
+        VALUES (?, ?, ?)`
       )
         .bind(
           title,
@@ -81,9 +84,9 @@ export default {
         )
         .run()
 
-      // Invalidate first page cache
+      // ✅ Optional now (since page 0 isn't cached anyway)
       const firstPageUrl = `${url.origin}/posts?page=0`
-      await caches.default.delete(firstPageUrl)
+      await caches.default.delete(new Request(firstPageUrl))
 
       return json({ success: true })
     }
