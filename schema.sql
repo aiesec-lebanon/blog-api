@@ -4,5 +4,6 @@ CREATE TABLE posts (
   body TEXT,
   image_url TEXT,
   author TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  expa_id TEXT
 );

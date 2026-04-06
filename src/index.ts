@@ -67,20 +67,25 @@ export default {
     if (request.method === "POST" && url.pathname === "/posts") {
 
       const data: BlogRequest = await request.json()
-      const { title, body, author } = data
+      const { title, body, author, expa_id } = data
 
       if (!title) {
         return json({ error: "Title required" }, 400)
       }
 
+      if (!expa_id) {
+        return json({ error: "Login required" }, 400)
+      }
+
       await env.blog_db.prepare(
-        `INSERT INTO posts (title, body, author)
-        VALUES (?, ?, ?)`
+        `INSERT INTO posts (title, body, author, expa_id)
+        VALUES (?, ?, ?, ?)`
       )
         .bind(
           title,
           body || null,
-          author || null
+          author || "Anonymous",
+          expa_id
         )
         .run()
 
