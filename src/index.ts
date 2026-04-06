@@ -34,7 +34,7 @@ export default {
       }
 
       const page = Number(url.searchParams.get("page") || 0)
-      const limit = 10
+      const limit = 25
       const offset = page * limit
 
       const { results } = await env.blog_db.prepare(
