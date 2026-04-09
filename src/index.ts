@@ -98,8 +98,7 @@ export default {
       const title = asString(data.title)
       const body = asString(data.body)
       const image_url = asString(data.image_url)
-      const author = asString(data.author)
-      const username = asString(data.username)
+      const author = asString(data.author) || "Anonymous"
       const expaId = asNumber(data.expa_id)
 
       if (!title) {
@@ -112,14 +111,13 @@ export default {
 
       await env.blog_db.prepare(
         `INSERT INTO posts (title, body, image_url, author, username, expa_id, is_deleted)
-        VALUES (?, ?, ?, ?, ?, ?, 0)`
+        VALUES (?, ?, ?, ?, NULL, ?, 0)`
       )
         .bind(
           title,
           body || null,
           image_url || null,
-          author || username || "Anonymous",
-          username || author || "Anonymous",
+          author,
           expaId
         )
         .run()
@@ -145,7 +143,7 @@ export default {
       const title = asString(data.title)
       const body = asString(data.body)
       const image_url = asString(data.image_url)
-      const username = asString(data.username)
+      const author = asString(data.author) || "Anonymous"
       const expaId = asNumber(data.expa_id)
 
       if (!title) {
@@ -174,15 +172,14 @@ export default {
 
       await env.blog_db.prepare(
         `UPDATE posts
-        SET title = ?, body = ?, image_url = ?, username = ?, author = ?
+        SET title = ?, body = ?, image_url = ?, author = ?, username = NULL
         WHERE id = ? AND COALESCE(is_deleted, 0) = 0`
       )
         .bind(
           title,
           body || null,
           image_url || null,
-          username || "Anonymous",
-          username || "Anonymous",
+          author,
           postId
         )
         .run()
@@ -263,41 +260,46 @@ export default {
     // =========================
     if (request.method === "POST" && url.pathname === "/comments") {
 
-      const data = await readRequestBody(request)
-      const postId = asNumber(data.post_id)
-      const expaId = asNumber(data.expa_id)
-      const username = asString(data.username)
-      const body = asString(data.body)
+      try {
+        const data = await readRequestBody(request)
+        const postId = asNumber(data.post_id)
+        const expaId = asNumber(data.expa_id)
+        const username = asString(data.username)
+        const body = asString(data.body)
 
-      if (!Number.isInteger(postId) || postId <= 0) {
-        return json({ error: "post_id required" }, 400)
-      }
+        if (!Number.isInteger(postId) || postId <= 0) {
+          return json({ error: "post_id required" }, 400)
+        }
 
-      if (!Number.isInteger(expaId)) {
-        return json({ error: "Login required" }, 400)
-      }
+        if (!Number.isInteger(expaId)) {
+          return json({ error: "Login required" }, 400)
+        }
 
-      if (!username) {
-        return json({ error: "username required" }, 400)
-      }
+        if (!username) {
+          return json({ error: "username required" }, 400)
+        }
 
-      if (!body) {
-        return json({ error: "body required" }, 400)
-      }
+        if (!body) {
+          return json({ error: "body required" }, 400)
+        }
 
-      await env.blog_db.prepare(
-        `INSERT INTO comments (post_id, expa_id, username, body, updated_at, is_deleted)
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 0)`
-      )
-        .bind(
-          postId,
-          expaId,
-          username,
-          body
+        await env.blog_db.prepare(
+          `INSERT INTO comments (post_id, expa_id, username, body)
+          VALUES (?, ?, ?, ?)`
         )
-        .run()
+          .bind(
+            postId,
+            expaId,
+            username,
+            body
+          )
+          .run()
 
-      return json({ success: true })
+        return json({ success: true })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        return json({ error: message }, 500)
+      }
     }
 
     // =========================
