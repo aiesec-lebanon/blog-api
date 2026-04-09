@@ -132,6 +132,111 @@ export default {
     }
 
     // =========================
+    // EDIT POST
+    // =========================
+    if (request.method === "PUT" && url.pathname.startsWith("/posts/")) {
+
+      const postId = Number(url.pathname.split("/")[2])
+      if (!Number.isInteger(postId) || postId <= 0) {
+        return json({ error: "post id required" }, 400)
+      }
+
+      const data = await readRequestBody(request)
+      const title = asString(data.title)
+      const body = asString(data.body)
+      const image_url = asString(data.image_url)
+      const username = asString(data.username)
+      const expaId = asNumber(data.expa_id)
+
+      if (!title) {
+        return json({ error: "Title required" }, 400)
+      }
+
+      if (!Number.isInteger(expaId)) {
+        return json({ error: "Login required" }, 400)
+      }
+
+      const existing = await env.blog_db.prepare(
+        `SELECT expa_id FROM posts
+        WHERE id = ? AND COALESCE(is_deleted, 0) = 0
+        LIMIT 1`
+      )
+        .bind(postId)
+        .first<{ expa_id: number }>()
+
+      if (!existing) {
+        return json({ error: "Post not found" }, 404)
+      }
+
+      if (Number(existing.expa_id) !== expaId) {
+        return json({ error: "Not allowed" }, 403)
+      }
+
+      await env.blog_db.prepare(
+        `UPDATE posts
+        SET title = ?, body = ?, image_url = ?, username = ?, author = ?
+        WHERE id = ? AND COALESCE(is_deleted, 0) = 0`
+      )
+        .bind(
+          title,
+          body || null,
+          image_url || null,
+          username || "Anonymous",
+          username || "Anonymous",
+          postId
+        )
+        .run()
+
+      return json({ success: true })
+    }
+
+    // =========================
+    // DELETE POST
+    // =========================
+    if (request.method === "DELETE" && url.pathname.startsWith("/posts/")) {
+
+      const postId = Number(url.pathname.split("/")[2])
+      if (!Number.isInteger(postId) || postId <= 0) {
+        return json({ error: "post id required" }, 400)
+      }
+
+      const data = await readRequestBody(request)
+      const expaIdFromBody = asNumber(data.expa_id)
+      const expaIdFromQuery = asNumber(url.searchParams.get("expa_id"))
+      const expaId = Number.isInteger(expaIdFromBody) ? expaIdFromBody : expaIdFromQuery
+
+      if (!Number.isInteger(expaId)) {
+        return json({ error: "Login required" }, 400)
+      }
+
+      const existing = await env.blog_db.prepare(
+        `SELECT expa_id FROM posts
+        WHERE id = ? AND COALESCE(is_deleted, 0) = 0
+        LIMIT 1`
+      )
+        .bind(postId)
+        .first<{ expa_id: number }>()
+
+      if (!existing) {
+        return json({ error: "Post not found" }, 404)
+      }
+
+      if (Number(existing.expa_id) !== expaId) {
+        return json({ error: "Not allowed" }, 403)
+      }
+
+      await env.blog_db.prepare(
+        `UPDATE posts
+        SET is_deleted = 1
+        WHERE id = ?`
+      )
+        .bind(postId)
+        .run()
+
+      return json({ success: true })
+    }
+
+    // =========================
     // GET COMMENTS
     // =========================
     if (request.method === "GET" && url.pathname === "/comments") {
