@@ -7,7 +7,7 @@ export interface Env {
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type"
 }
 
@@ -61,6 +61,32 @@ export default {
       }
 
       return addCors(response)
+    }
+
+    // =========================
+    // GET SINGLE POST
+    // =========================
+    if (request.method === "GET" && url.pathname.startsWith("/posts/")) {
+
+      const postId = Number(url.pathname.split("/")[2])
+
+      if (!Number.isInteger(postId) || postId <= 0) {
+        return json({ error: "post id required" }, 400)
+      }
+
+      const result = await env.blog_db.prepare(
+        `SELECT * FROM posts
+        WHERE id = ? AND COALESCE(is_deleted, 0) = 0
+        LIMIT 1`
+      )
+        .bind(postId)
+        .first()
+
+      if (!result) {
+        return json({ error: "Post not found" }, 404)
+      }
+
+      return json(result)
     }
 
     // =========================
