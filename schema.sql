@@ -3,7 +3,19 @@ CREATE TABLE posts (
   title TEXT NOT NULL,
   body TEXT,
   image_url TEXT,
-  author TEXT,
+  username TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  expa_id TEXT
+  expa_id INTEGER,
+  is_deleted BOOLEAN DEFAULT 0
+);
+
+CREATE TABLE comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL,
+  expa_id INTEGER NOT NULL,
+  username TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME,
+  is_deleted BOOLEAN DEFAULT 0
 );
