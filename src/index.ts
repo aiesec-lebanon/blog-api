@@ -93,40 +93,44 @@ export default {
     // CREATE POST
     // =========================
     if (request.method === "POST" && url.pathname === "/posts") {
+      try {
+        const data = await readRequestBody(request)
+        const title = asString(data.title)
+        const body = asString(data.body)
+        const image_url = asString(data.image_url)
+        const author = asString(data.author) || "Anonymous"
+        const expaId = asNumber(data.expa_id)
 
-      const data = await readRequestBody(request)
-      const title = asString(data.title)
-      const body = asString(data.body)
-      const image_url = asString(data.image_url)
-      const author = asString(data.author) || "Anonymous"
-      const expaId = asNumber(data.expa_id)
+        if (!title) {
+          return json({ error: "Title required" }, 400)
+        }
 
-      if (!title) {
-        return json({ error: "Title required" }, 400)
-      }
+        if (!Number.isInteger(expaId)) {
+          return json({ error: "Login required" }, 400)
+        }
 
-      if (!Number.isInteger(expaId)) {
-        return json({ error: "Login required" }, 400)
-      }
-
-      await env.blog_db.prepare(
-        `INSERT INTO posts (title, body, image_url, author, username, expa_id, is_deleted)
-        VALUES (?, ?, ?, ?, NULL, ?, 0)`
-      )
-        .bind(
-          title,
-          body || null,
-          image_url || null,
-          author,
-          expaId
+        await env.blog_db.prepare(
+          `INSERT INTO posts (title, body, image_url, author, username, expa_id, is_deleted)
+          VALUES (?, ?, ?, ?, NULL, ?, 0)`
         )
-        .run()
+          .bind(
+            title,
+            body || null,
+            image_url || null,
+            author,
+            expaId
+          )
+          .run()
 
-      // ✅ Optional now (since page 0 isn't cached anyway)
-      const firstPageUrl = `${url.origin}/posts?page=0`
-      await caches.default.delete(new Request(firstPageUrl))
+        // ✅ Optional now (since page 0 isn't cached anyway)
+        const firstPageUrl = `${url.origin}/posts?page=0`
+        await caches.default.delete(new Request(firstPageUrl))
 
-      return json({ success: true })
+        return json({ success: true })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        return json({ error: message }, 500)
+      }
     }
 
     // =========================
