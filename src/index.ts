@@ -41,7 +41,7 @@ export default {
 
       const { results } = await env.blog_db.prepare(
         `SELECT * FROM posts
-        WHERE COALESCE(is_deleted, 0) = 0
+        WHERE COALESCE(is_deleted, 0) = 0 AND COALESCE(isApproved, 1) = 1
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?`
       )
@@ -76,7 +76,7 @@ export default {
 
       const result = await env.blog_db.prepare(
         `SELECT * FROM posts
-        WHERE id = ? AND COALESCE(is_deleted, 0) = 0
+        WHERE id = ? AND COALESCE(is_deleted, 0) = 0 AND COALESCE(isApproved, 1) = 1
         LIMIT 1`
       )
         .bind(postId)
@@ -99,26 +99,31 @@ export default {
         const body = asString(data.body)
         const image_url = asString(data.image_url)
         const author = asString(data.author) || "Anonymous"
-        const expaId = asNumber(data.expa_id)
+        const username = asString(data.username) || null
+        let expaId = asNumber(data.expa_id)
+        let isApproved = 1
 
         if (!title) {
           return json({ error: "Title required" }, 400)
         }
 
         if (!Number.isInteger(expaId)) {
-          return json({ error: "Login required" }, 400)
+          expaId = -1 // allow guest posts with a default 
+          isApproved = 0 // require approval for guest posts
         }
 
         await env.blog_db.prepare(
-          `INSERT INTO posts (title, body, image_url, author, username, expa_id, is_deleted)
-          VALUES (?, ?, ?, ?, NULL, ?, 0)`
+          `INSERT INTO posts (title, body, image_url, author, username, expa_id, is_deleted, isApproved)
+          VALUES (?, ?, ?, ?, ?, ?, 0, ?)`
         )
           .bind(
             title,
             body || null,
             image_url || null,
             author,
-            expaId
+            username,
+            expaId,
+            isApproved
           )
           .run()
 
@@ -160,7 +165,7 @@ export default {
 
       const existing = await env.blog_db.prepare(
         `SELECT expa_id FROM posts
-        WHERE id = ? AND COALESCE(is_deleted, 0) = 0
+        WHERE id = ? AND COALESCE(is_deleted, 0) = 0 AND COALESCE(isApproved, 1) = 1
         LIMIT 1`
       )
         .bind(postId)
@@ -177,7 +182,7 @@ export default {
       await env.blog_db.prepare(
         `UPDATE posts
         SET title = ?, body = ?, image_url = ?, author = ?, username = NULL
-        WHERE id = ? AND COALESCE(is_deleted, 0) = 0`
+        WHERE id = ? AND COALESCE(is_deleted, 0) = 0 AND COALESCE(isApproved, 1) = 1`
       )
         .bind(
           title,
@@ -212,7 +217,7 @@ export default {
 
       const existing = await env.blog_db.prepare(
         `SELECT expa_id FROM posts
-        WHERE id = ? AND COALESCE(is_deleted, 0) = 0
+        WHERE id = ? AND COALESCE(is_deleted, 0) = 0 AND COALESCE(isApproved, 1) = 1
         LIMIT 1`
       )
         .bind(postId)
